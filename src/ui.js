@@ -1,6 +1,6 @@
 // UI y orquestación del MVP
 import { APP_ID, DEFAULT_GAME_STATE } from "./config.js";
-import { initFirebase, signInAnon, getUser, readGameState, seedInitialState, writeGameState, subscribeGameState } from "./firebase.js";
+import { initFirebase, signInAnon, getUser, readGameState, seedInitialState, writeGameState, subscribeGameState, resetGameState } from "./firebase.js";
 import { sendToLLM } from "./llm.js";
 import { validateProposal, applyProposal, advanceTurn } from "./game.js";
 
@@ -12,12 +12,16 @@ const el = {
   sendBtn: document.getElementById("send-btn"),
   advanceTurnBtn: document.getElementById("advance-turn-btn"),
   proposalPanel: document.getElementById("proposal-panel"),
+  resetBtn: document.getElementById("reset-state-btn"),
+  copyPathBtn: document.getElementById("copy-doc-path-btn"),
 };
 
 let userId = null;
 let currentState = { ...DEFAULT_GAME_STATE };
 let proposalPending = null;
 const chat = [];
+let debugBadgeHtml = "";
+let stateDocPath = "";
 
 function renderStatus(state) {
   const cityLabel = (c) => ({ A: "Ciudad A (Capital)", B: "Ciudad B", C: "Ciudad C" }[c] || c);
@@ -36,7 +40,7 @@ function renderStatus(state) {
     ? `<span class="px-2 py-1 rounded bg-slate-700 border border-slate-600 text-slate-200">Evento: ${state._last_event}</span>`
     : "";
 
-  el.statusBadges.innerHTML = `${expedition} ${lastEvent}`;
+  el.statusBadges.innerHTML = `${expedition} ${lastEvent} ${debugBadgeHtml}`;
 }
 
 function addChat(role, text) {
@@ -117,12 +121,28 @@ async function onAdvanceTurn() {
   await writeGameState(userId, next);
 }
 
+async function onResetState() {
+  await resetGameState(userId);
+  addChat("assistant", "Estado reiniciado a los valores por defecto.");
+}
+
+async function onCopyDocPath() {
+  try {
+    await navigator.clipboard.writeText(stateDocPath);
+    addChat("assistant", `Ruta copiada al portapapeles: ${stateDocPath}`);
+  } catch (e) {
+    addChat("assistant", `No se pudo copiar. Ruta: ${stateDocPath}`);
+  }
+}
+
 function wireEvents() {
   el.sendBtn.onclick = onSend;
   el.chatInput.onkeydown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) onSend();
   };
   el.advanceTurnBtn.onclick = onAdvanceTurn;
+  if (el.resetBtn) el.resetBtn.onclick = onResetState;
+  if (el.copyPathBtn) el.copyPathBtn.onclick = onCopyDocPath;
 }
 
 async function bootstrap() {
@@ -130,6 +150,10 @@ async function bootstrap() {
   await signInAnon();
   const u = getUser();
   userId = u?.uid;
+  stateDocPath = `artifacts/rol-mvp/users/${userId}/game_state/state`;
+  debugBadgeHtml = userId
+    ? `<span class=\"px-2 py-1 rounded bg-sky-500/20 border border-sky-600 text-sky-200\">UID: ${userId.slice(0,8)}…</span>`
+    : "";
 
   // Lee estado inicial o si no existe, lo crea
   const state = await readGameState(userId);

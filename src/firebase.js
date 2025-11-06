@@ -65,6 +65,12 @@ export async function seedInitialState(userId) {
   await setDoc(ref, { ...DEFAULT_GAME_STATE }, { merge: false });
 }
 
+export async function resetGameState(userId) {
+  // Sobrescribe completamente el documento con el estado por defecto
+  const ref = gameDocRef(userId);
+  await setDoc(ref, { ...DEFAULT_GAME_STATE }, { merge: false });
+}
+
 export function subscribeGameState(userId, cb) {
   const ref = gameDocRef(userId);
   return onSnapshot(ref, (snap) => {

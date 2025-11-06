@@ -8,7 +8,7 @@ export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyC5y1oSQ7FGOh02SnNdCSTGttRERbLD-xw",
   authDomain: "rolgame-589d7.firebaseapp.com",
   projectId: "rolgame-589d7",
-  storageBucket: "rolgame-589d7.firebasestorage.app",
+  storageBucket: "rolgame-589d7.appspot.com",
   messagingSenderId: "891845244549",
   appId: "1:891845244549:web:b100c3fca3d905e3f69bec",
   measurementId: "G-2VZHL1ZMV8",
