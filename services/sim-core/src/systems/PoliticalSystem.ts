@@ -26,17 +26,18 @@ export async function runPoliticalSystem(prisma: Prisma, tick: number) {
     let totalGap = 0;
     const next = rels.map(r => {
       const attitude = typeof r.attitude === 'number' ? r.attitude : 0;
-      // Base drift toward neutral
+      const memBonus = memoryMap.get(r.stateId || r.id) || 0; // memory target for this relation
       let moved = attitude;
-      if (attitude > 0) moved = attitude - 1;
-      else if (attitude < 0) moved = attitude + 1;
-      // Apply persistent memory modifier
-      const memBonus = memoryMap.get(r.stateId || r.id) || 0; // assuming relation entry has stateId or id
-      // Converge towards memory sum by adjusting the baseline around it
-      // i.e., after neutral drift, move result closer to memBonus target
-      if (moved < memBonus) moved = Math.min(memBonus, moved + 1);
-      else if (moved > memBonus) moved = Math.max(memBonus, moved - 1);
-      const gap = Math.abs((moved) - memBonus);
+      if (memBonus !== 0) {
+        // Converge one step toward memory target without neutral-cancel effect
+        if (moved < memBonus) moved = moved + 1;
+        else if (moved > memBonus) moved = moved - 1;
+      } else {
+        // No memory: drift one step toward neutral
+        if (moved > 0) moved = moved - 1;
+        else if (moved < 0) moved = moved + 1;
+      }
+      const gap = Math.abs(moved - memBonus);
       totalGap += gap;
       globalGapSum += gap;
       globalRelationCount += 1;

@@ -1,6 +1,14 @@
 # Minimal Dockerfile for BFF (GraphQL + REST)
-FROM node:20-alpine AS base
+# Switch to Debian-based image to ensure compatible OpenSSL for Prisma engines
+FROM node:20-bookworm-slim AS base
 WORKDIR /usr/src/app/apps/api
+
+# Install system dependencies (OpenSSL for Prisma engines)
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+	   openssl \
+	   ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Install deps
 COPY apps/api/package*.json ./
@@ -19,6 +27,9 @@ WORKDIR /usr/src/app/apps/api
 # Copy sources
 COPY apps/api/tsconfig.json ./
 COPY apps/api/src ./src
+# Copy tests and vitest config for CI runs
+COPY apps/api/tests ./tests
+COPY apps/api/vitest.config.ts ./vitest.config.ts
 # Copy GraphQL schema used at runtime
 RUN mkdir -p /usr/src/app/packages/schema/graphql
 COPY packages/schema/graphql/schema.graphql /usr/src/app/packages/schema/graphql/schema.graphql

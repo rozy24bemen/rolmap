@@ -4,6 +4,15 @@ import path from 'path'
 export default defineConfig({
   test: {
     globals: true,
+    // Force serial execution to avoid data races in shared Postgres DB
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
+    testTimeout: 30000,
+    hookTimeout: 30000,
   },
   resolve: {
     alias: {
