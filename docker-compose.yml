@@ -25,7 +25,7 @@ services:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
-      - VITE_USE_MOCK=false
+      - VITE_USE_MOCK=false      docker compose -f docker-compose.yml -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from api_test api_test db_test      docker compose -f docker-compose.yml -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from api_test api_test db_test
       - VITE_API_BASE=
     command: sh -c "npm ci && cd apps/web && npm run dev -- --host 0.0.0.0 --port 5173"
     ports:
