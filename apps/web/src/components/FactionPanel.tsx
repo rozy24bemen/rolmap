@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import type { FactionSummary, ObjectiveNode, Alert } from '../../../../packages/schema/ts/types'
+import { useReactiveQuery } from '../hooks/useReactiveQuery'
+import { queries } from '../sdk'
 
 const AlertIcon: React.FC<{ severity: 'low'|'med'|'high' }> = ({ severity }) => {
   const color = severity === 'high' ? 'bg-red-500' : severity === 'med' ? 'bg-yellow-500' : 'bg-blue-500'
@@ -28,6 +30,16 @@ const FactionPanel: React.FC<FactionPanelProps> = ({ faction, onSuggestStrategy,
   const [isExpanded, setIsExpanded] = useState(true)
 
   const { id, name, treasury, stability, militaryStrength, llmStatus, alerts = [], objectives } = faction
+  const activeConflicts = useReactiveQuery(async () => {
+    return await queries.getConflicts({ stateId: id, status: 'ACTIVE', limit: 10 })
+  }, [id])
+  const activeWarText = useMemo(() => {
+    const list = (activeConflicts.data ?? []) as any[]
+    if (list.length === 0) return null
+    const first = list[0]
+    const opponent = first.aggressorStateId === id ? first.defenderStateId : first.aggressorStateId
+    return `En Guerra con ${opponent} (desde Tick ${first.startTick})`
+  }, [activeConflicts.data, id])
   const stabilityColor = stability > 70 ? 'text-green-500' : stability < 40 ? 'text-red-500' : 'text-yellow-500'
 
   return (
@@ -46,6 +58,12 @@ const FactionPanel: React.FC<FactionPanelProps> = ({ faction, onSuggestStrategy,
             <div><span className="font-semibold">Estabilidad:</span> <span className={stabilityColor}>{stability.toFixed(1)}%</span></div>
             <div><span className="font-semibold">Fuerza Militar:</span> {militaryStrength.toLocaleString()}</div>
           </div>
+
+          {activeWarText && (
+            <div className="bg-yellow-900/40 border border-yellow-700 rounded p-2 mb-3 text-sm text-yellow-200">
+              {activeWarText}
+            </div>
+          )}
 
           {alerts.length > 0 && (
             <div className="bg-red-900/50 p-2 rounded mb-4">

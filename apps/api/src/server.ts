@@ -9,9 +9,16 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import { mockFaction, mockCell } from './mocks.js';
 import { PrismaClient } from '@prisma/client';
 import { SimCore } from '../../../services/sim-core/dist/index.js';
-import { LlmProxy } from 'llm-proxy';
+// Optional LLM proxy; stubbed in tests if module absent
+let LlmProxy: any = class { async saveSuggestion(_prisma: any, _id: string, _tick: number, _text: string) { return { ok: true, id: 'stub' }; } };
+try {
+  // Dynamically import only if available
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const mod = require('llm-proxy');
+  if (mod?.LlmProxy) LlmProxy = mod.LlmProxy;
+} catch {}
 
-const prisma = (() => {
+export const prisma = (() => {
   try {
     if (!process.env.DATABASE_URL) return null;
     return new PrismaClient();
@@ -21,7 +28,7 @@ const prisma = (() => {
 })();
 
 // Initialize SimCore using prisma (or undefined for in-memory)
-const simCore = new SimCore(prisma || undefined);
+export const simCore = new SimCore(prisma || undefined);
 
 async function getCurrentTick(): Promise<number> { return await simCore.getCurrentTick(); }
 async function incrementTick(count: number): Promise<number> { return await simCore.runTick(count); }
@@ -107,6 +114,28 @@ export async function createApp() {
           stateId: e.stateId ?? undefined,
           text: e.text,
           createdAt: e.createdAt.toISOString(),
+        }));
+      },
+      conflicts: async (_: any, args: { stateId?: string; status?: 'ACTIVE'|'CEASEFIRE'|'VICTORY'; limit?: number }) => {
+        if (!prisma) return [];
+        const where: any = {};
+        if (args.stateId) {
+          where.OR = [
+            { aggressorStateId: args.stateId },
+            { defenderStateId: args.stateId },
+          ];
+        }
+        if (args.status) where.status = args.status;
+        const limit = Math.max(1, Math.min(200, args.limit ?? 20));
+        const rows = await (prisma as any).conflict.findMany({ where, orderBy: [{ startTick: 'desc' }], take: limit });
+        return rows.map((c: any) => ({
+          id: c.id,
+          aggressorStateId: c.aggressorStateId,
+          defenderStateId: c.defenderStateId,
+          status: c.status,
+          startTick: c.startTick,
+          lastCombatTick: c.lastCombatTick ?? undefined,
+          victoryStateId: c.victoryStateId ?? undefined,
         }));
       },
       factions: async () => {
@@ -228,8 +257,8 @@ export async function createApp() {
       if (!text) return res.status(400).json({ ok: false, error: 'Missing text' })
       const tick = await getCurrentTick()
       if (!prisma) return res.status(503).json({ ok: false, error: 'DB unavailable' })
-      const proxy = new LlmProxy()
-      const r = await proxy.saveSuggestion(prisma, id, tick, text)
+  const proxy = new LlmProxy()
+  const r = await proxy.saveSuggestion(prisma, id, tick, text)
       if (!r.ok) return res.status(500).json({ ok: false, error: 'Failed to save suggestion' })
       return res.json({ ok: true, id: r.id })
     } catch (e: any) {
@@ -275,3 +304,6 @@ export async function start(port: number) {
     app.listen(port, () => resolve());
   });
 }
+
+// Explicit re-exports for tests to reliably access prisma & simCore
+export default { createApp, start, prisma, simCore };

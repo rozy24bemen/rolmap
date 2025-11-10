@@ -66,6 +66,14 @@ const Q_NARRATIVE_EVENTS = /* GraphQL */ `
   }
 `;
 
+const Q_CONFLICTS = /* GraphQL */ `
+  query Conflicts($stateId: ID, $status: ConflictStatus, $limit: Int) {
+    conflicts(stateId: $stateId, status: $status, limit: $limit) {
+      id aggressorStateId defenderStateId status startTick lastCombatTick victoryStateId
+    }
+  }
+`;
+
 export const createQueries = (cfg: SDKConfig) => {
   const client = createGraphQLClient(cfg);
   return {
@@ -107,6 +115,10 @@ export const createQueries = (cfg: SDKConfig) => {
     getNarrativeEvents: async (params: { stateId?: string; fromTick?: number; toTick?: number; limit?: number }) => {
       const r = await client.query<{ narrativeEvents: any[] }>(Q_NARRATIVE_EVENTS, params);
       return r.narrativeEvents;
+    },
+    getConflicts: async (params: { stateId?: string; status?: string; limit?: number }) => {
+      const r = await client.query<{ conflicts: any[] }>(Q_CONFLICTS, params);
+      return r.conflicts;
     },
   };
 };

@@ -119,3 +119,24 @@ model PoliticalMemory {
   @@index([expiresAtTick])
   @@unique([sourceStateId, targetStateId, factorKey])
 }
+
+/// Conflicts between states (wars)
+enum ConflictStatus {
+  ACTIVE
+  CEASEFIRE
+  VICTORY
+}
+
+model Conflict {
+  id              String          @id @default(cuid())
+  aggressorStateId String
+  defenderStateId  String
+  status          ConflictStatus  @default(ACTIVE)
+  startTick       Int
+  lastCombatTick  Int?
+  victoryStateId  String?
+  createdAt       DateTime        @default(now())
+
+  @@index([aggressorStateId, defenderStateId])
+  @@index([status])
+}

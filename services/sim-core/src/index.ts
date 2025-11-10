@@ -2,6 +2,7 @@ import { runEconomicSystem as econRun, defaultEconomicConfig } from './systems/E
 import { runPoliticalSystem as polRun } from './systems/PoliticalSystem';
 import { runEventSystem } from './systems/EventSystem';
 import { runDecisionSystem } from './systems/DecisionSystem';
+import { runWarSystem } from './systems/WarSystem';
 
 export interface EconomicConfig {
   incomePopDivisor?: number; // income from population: pop / divisor
@@ -62,8 +63,10 @@ export class SimCore {
 
     // 2) Scheduler — fixed order systems, and collect messages
     if (this.prisma) {
-      await polRun(this.prisma, newTick);
-      console.debug(`[SimCore] Political System executed at tick ${newTick}`);
+  await polRun(this.prisma, newTick);
+  console.debug(`[SimCore] Political System executed at tick ${newTick}`);
+  await runWarSystem(this.prisma, newTick);
+  console.debug(`[SimCore] War System executed at tick ${newTick}`);
       // Map local econ config to system config
       const cfg = {
         incomePopDivisor: this.econ.incomePopDivisor,

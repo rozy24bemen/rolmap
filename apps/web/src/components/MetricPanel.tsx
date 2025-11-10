@@ -43,6 +43,19 @@ const MetricPanel: React.FC<MetricPanelProps> = ({ stateId }) => {
   }, [stateId, fromTick, toTick])
   const eqGapVals = useMemo(() => (eqGap.data ?? []).slice().reverse().map((m: any) => m.value), [eqGap.data])
 
+  // War metrics
+  const warCasualties = useReactiveQuery(async () => {
+    if (!stateId) return [] as any[]
+    return await queries.getTickMetrics({ stateId, metricKey: 'war_casualties', fromTick, toTick, limit: 20 })
+  }, [stateId, fromTick, toTick])
+  const warCasualtyVals = useMemo(() => (warCasualties.data ?? []).slice().reverse().map((m: any) => m.value), [warCasualties.data])
+
+  const warCost = useReactiveQuery(async () => {
+    if (!stateId) return [] as any[]
+    return await queries.getTickMetrics({ stateId, metricKey: 'war_treasury_cost', fromTick, toTick, limit: 20 })
+  }, [stateId, fromTick, toTick])
+  const warCostVals = useMemo(() => (warCost.data ?? []).slice().reverse().map((m: any) => m.value), [warCost.data])
+
   const treasuryVals = useMemo(() => (treasury.data ?? []).slice().reverse().map((m: any) => m.value), [treasury.data])
   const driftVals = useMemo(() => (drift.data ?? []).slice().reverse().map((m: any) => m.value), [drift.data])
   const tickInfo = useReactiveQuery(async () => await queries.getTickInfo(), [])
@@ -173,6 +186,43 @@ const MetricPanel: React.FC<MetricPanelProps> = ({ stateId }) => {
                   {(aiMilitary.data ?? []).map((m: any) => (
                     <li key={m.id} className={m.value >= 0 ? 'text-green-300' : 'text-red-300'}>
                       Tick {m.tick}: {m.value.toFixed(2)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-1 flex items-center justify-between">Guerra: Bajas
+              <span className="inline-block align-middle"><Sparkline values={warCasualtyVals} width={120} height={28} stroke="#ef4444" /></span>
+            </h3>
+            <div className="bg-gray-900/60 rounded p-2 text-xs max-h-40 overflow-auto">
+              {warCasualties.loading && <div className="text-gray-500">Cargando…</div>}
+              {warCasualties.error && <div className="text-red-400">{warCasualties.error}</div>}
+              {!warCasualties.loading && !warCasualties.error && (
+                <ul className="space-y-1">
+                  {(warCasualties.data ?? []).map((m: any) => (
+                    <li key={m.id} className="text-red-300">
+                      Tick {m.tick}: {m.value.toFixed(0)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold mb-1 flex items-center justify-between">Gasto de Guerra ($)
+              <span className="inline-block align-middle"><Sparkline values={warCostVals} width={120} height={28} stroke="#f97316" /></span>
+            </h3>
+            <div className="bg-gray-900/60 rounded p-2 text-xs max-h-40 overflow-auto">
+              {warCost.loading && <div className="text-gray-500">Cargando…</div>}
+              {warCost.error && <div className="text-red-400">{warCost.error}</div>}
+              {!warCost.loading && !warCost.error && (
+                <ul className="space-y-1">
+                  {(warCost.data ?? []).map((m: any) => (
+                    <li key={m.id} className="text-orange-300">
+                      Tick {m.tick}: {m.value.toFixed(0)}
                     </li>
                   ))}
                 </ul>

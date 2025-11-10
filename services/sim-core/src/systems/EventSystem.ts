@@ -37,4 +37,24 @@ export async function runEventSystem(prisma: any, llm: any, tick: number) {
       await prisma.narrativeEvent.create({ data: { tick, stateId: s.stateId, text } });
     } catch {}
   }
+
+  // Generate narratives for conflicts resolved this tick (VICTORY or CEASEFIRE)
+  const resolved = await prisma.conflict.findMany({
+    where: { lastCombatTick: tick, status: { in: ['VICTORY', 'CEASEFIRE'] } },
+  });
+  for (const c of resolved) {
+    const [agg, def] = await Promise.all([
+      prisma.state.findUnique({ where: { id: c.aggressorStateId }, select: { name: true } }),
+      prisma.state.findUnique({ where: { id: c.defenderStateId }, select: { name: true } }),
+    ]);
+    const aName = agg?.name || c.aggressorStateId;
+    const dName = def?.name || c.defenderStateId;
+    const duration = Math.max(1, tick - (c.startTick ?? tick));
+    const outcome = c.status === 'VICTORY'
+      ? (c.victoryStateId === c.aggressorStateId ? `${aName} declaró la victoria sobre ${dName}` : `${dName} declaró la victoria sobre ${aName}`)
+      : `Cese al fuego entre ${aName} y ${dName}`;
+    const text = `${outcome} tras ${duration} tick(s) de guerra.`;
+    await prisma.narrativeEvent.create({ data: { tick, stateId: c.aggressorStateId, text } });
+    await prisma.narrativeEvent.create({ data: { tick, stateId: c.defenderStateId, text } });
+  }
 }

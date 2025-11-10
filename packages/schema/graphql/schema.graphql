@@ -119,6 +119,7 @@ type Query {
   army(id: ID!): Army
   tickMetrics(stateId: ID, metricKey: String, fromTick: Int, toTick: Int, limit: Int = 10): [TickMetric!]!
   narrativeEvents(stateId: ID, fromTick: Int, toTick: Int, limit: Int = 20): [NarrativeEvent!]!
+  conflicts(stateId: ID, status: ConflictStatus, limit: Int = 20): [Conflict!]!
 }
 
 type WorldUpdate {
@@ -152,4 +153,16 @@ type NarrativeEvent {
   stateId: ID
   text: String!
   createdAt: String!
+}
+
+enum ConflictStatus { ACTIVE CEASEFIRE VICTORY }
+
+type Conflict {
+  id: ID!
+  aggressorStateId: ID!
+  defenderStateId: ID!
+  status: ConflictStatus!
+  startTick: Int!
+  lastCombatTick: Int
+  victoryStateId: ID
 }
